@@ -1,0 +1,32 @@
+
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.10
+    commands:
+      - pip install --upgrade --force-reinstall . "awscli>1.20.30"
+      - pip install mlflow==2.13.2 sagemaker-mlflow s3fs xgboost
+    
+  build:
+    commands:
+      - export SAGEMAKER_USER_CONFIG_OVERRIDE="./config.yaml"
+      - export PYTHONUNBUFFERED=TRUE
+      - export SAGEMAKER_PROJECT_NAME_ID="${SAGEMAKER_PROJECT_NAME}-${SAGEMAKER_PROJECT_ID}"
+      - |
+        run-pipeline --module-name pipelines.fromideatoprod.pipeline \
+          --role-arn $SAGEMAKER_PIPELINE_ROLE_ARN \
+          --tags "[{\"Key\":\"sagemaker:project-name\",\"Value\":\"${SAGEMAKER_PROJECT_NAME}\"}, {\"Key\":\"sagemaker:project-id\", \"Value\":\"${SAGEMAKER_PROJECT_ID}\"}]" \
+          --kwargs "{ \
+                \"input_s3_url\":\"s3://sagemaker-us-east-1-446490546198/mlops-pk/xgboost/input/bank-additional-full.csv\", \
+                \"model_package_group_name\":\"mlops-pk-proj-1-pipeline-model-24-19-09-00\",\
+                \"pipeline_name_prefix\":\"mlops-pk-proj-1-pipeline-24-19-09-00\",\
+                \"role\":\"arn:aws:iam::446490546198:role/service-role/AmazonSageMaker-ExecutionRole-20240919T173156\",\
+                \"tracking_server_arn\":\"arn:aws:sagemaker:us-east-1:446490546198:mlflow-tracking-server/mlflow-d-fkrqwhxrpnws-20-05-26-15\", \
+                \"region\":\"${AWS_REGION}\", \
+                \"sagemaker_project_name\":\"${SAGEMAKER_PROJECT_NAME}\",\
+                \"sagemaker_project_id\":\"${SAGEMAKER_PROJECT_ID}\",\
+                \"bucket_name\":\"${ARTIFACT_BUCKET}\"\
+                    }"
+      - echo "Create/update of the SageMaker Pipeline and a pipeline execution completed."
